@@ -22,6 +22,7 @@ export default createStore({
       localStorage.removeItem('currentUser');
     },
     setTodos(state, todos: Todo[]) {
+        console.log(todos);
       state.todos = todos;
     },
     addTodo(state, todo: Todo) {

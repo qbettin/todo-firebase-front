@@ -51,28 +51,42 @@ export const logoutUser = async (): Promise<void> => {
 
 // To-Do Operations
 export const loadTodos = async (): Promise<Todo[]> => {
+  const user = auth.currentUser;
   const querySnapshot = await getDocs(todosCollection);
   const todos: Todo[] = [];
   querySnapshot.forEach((doc) => {
     const todoData = doc.data();
-    todos.push({
-      _id: doc.id,
-      task: todoData.task,
-      completed: todoData.completed,
-      created_at: todoData.created_at.toDate(),
-      completed_at: todoData.completed_at?.toDate() || null,
-    });
+    if(user){
+        if(todoData.user_id === user.uid){
+            todos.push({
+            _id: doc.id,
+            user_id: todoData.user_id,
+            task: todoData.task,
+            completed: todoData.completed,
+            created_at: todoData.created_at.toDate(),
+            completed_at: todoData.completed_at?.toDate() || null,
+            });
+        }
+    } else {
+        throw new Error("User must be authenticated to load todos.");
+    }
   });
   return todos;
 };
 
 export const createTodo = async (task: string): Promise<Todo> => {
     const created_at = new Date();
-    const newTodo: Omit<Todo, '_id'> = {
+    const user = auth.currentUser;
+    if (!user) {
+        throw new Error("User must be authenticated to create a todo.");
+    }
+    
+    const newTodo: Omit<Todo, '_id'> & { user_id: string } = {
       task,
       completed: false,
       created_at: created_at,
       completed_at: null,
+      user_id: user.uid,  // Add user_id here
     };
     // Use Firestore to add the new Todo
     const docRef = await addDoc(todosCollection, newTodo);
@@ -105,6 +119,7 @@ export const editTodo = async (id: string, task: string, completed: boolean): Pr
     // Return the updated todo, preserving `user` and `createdAt`
     const updatedTodo: Todo = {
       _id: id,
+      user_id: existingTodo.user_id,
       task,
       completed,
       completed_at: completed ? updatedAt : null,
